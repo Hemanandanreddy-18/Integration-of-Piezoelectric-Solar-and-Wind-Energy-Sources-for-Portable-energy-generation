@@ -50,7 +50,7 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
   const [currentStepValue, setCurrentStepValue] = useState(0);
   const [isStepDetected, setIsStepDetected] = useState(false);
   const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevValuesRef = useRef<Set<number>>(new Set());
+  const seenKeysRef = useRef<Set<string>>(new Set());
 
   const isDark =
     themeMode === "dark" || (themeMode === "system" && systemScheme === "dark");
@@ -94,16 +94,33 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
 
       const rawData = snapshot.val();
       const readings: SensorReading[] = [];
+      const newSteps: ProcessedStep[] = [];
 
       if (typeof rawData === "object" && rawData !== null) {
-        for (const key of Object.keys(rawData)) {
-          const item = rawData[key];
+        const fbKeys = Object.keys(rawData);
+        for (const fbKey of fbKeys) {
+          const item = rawData[fbKey];
           if (item && typeof item.value === "number" && item.timestamp_unix) {
-            readings.push({
+            const reading: SensorReading = {
               value: item.value,
               timestamp_unix: item.timestamp_unix,
               timestamp_ist: item.timestamp_ist || "",
-            });
+            };
+            readings.push(reading);
+
+            if (!seenKeysRef.current.has(fbKey) && isStep(item.value)) {
+              const energy = calculateEnergy(item.value, calibrationFactor);
+              newSteps.push({
+                id: fbKey,
+                value: item.value,
+                energy,
+                timestamp: item.timestamp_unix,
+                timestampIST: item.timestamp_ist || "",
+              });
+              seenKeysRef.current.add(fbKey);
+            } else if (!seenKeysRef.current.has(fbKey)) {
+              seenKeysRef.current.add(fbKey);
+            }
           }
         }
       }
@@ -115,41 +132,23 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
         setLatestReading(latest);
         setLastUpdateTime(latest.timestamp_unix);
         markOnline();
-
-        const newStepKeys = new Set<number>(prevValuesRef.current);
-        const detectedSteps: ProcessedStep[] = [];
-
-        for (const reading of readings) {
-          const key = reading.timestamp_unix;
-          if (!prevValuesRef.current.has(key) && isStep(reading.value)) {
-            const energy = calculateEnergy(reading.value, calibrationFactor);
-            detectedSteps.push({
-              id: `${key}-${reading.value}`,
-              value: reading.value,
-              energy,
-              timestamp: reading.timestamp_unix,
-              timestampIST: reading.timestamp_ist,
-            });
-          }
-          newStepKeys.add(key);
-        }
-
-        if (detectedSteps.length > 0) {
-          const latestStep = detectedSteps[detectedSteps.length - 1];
-          setCurrentStepEnergy(latestStep.energy);
-          setCurrentStepValue(latestStep.value);
-          setIsStepDetected(true);
-          setTimeout(() => setIsStepDetected(false), 2000);
-        }
-
-        prevValuesRef.current = newStepKeys;
         setAllReadings(readings);
+      }
+
+      if (newSteps.length > 0) {
+        newSteps.sort((a, b) => b.timestamp - a.timestamp);
+        const latestStep = newSteps[0];
+        setCurrentStepEnergy(latestStep.energy);
+        setCurrentStepValue(latestStep.value);
+        setIsStepDetected(true);
+        setTimeout(() => setIsStepDetected(false), 2000);
 
         setRecentSteps((prev) => {
-          const combined = [...prev, ...detectedSteps]
+          const existingIds = new Set(prev.map((s) => s.id));
+          const uniqueNew = newSteps.filter((s) => !existingIds.has(s.id));
+          return [...uniqueNew, ...prev]
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, MAX_STORED_STEPS);
-          return combined;
         });
       }
     });
@@ -164,15 +163,14 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     if (allReadings.length > 0) {
       const steps = allReadings
         .filter((r) => isStep(r.value))
-        .map((r) => ({
-          id: `${r.timestamp_unix}-${r.value}`,
+        .map((r, i) => ({
+          id: `analytics-${r.timestamp_unix}-${i}`,
           value: r.value,
           energy: calculateEnergy(r.value, calibrationFactor),
           timestamp: r.timestamp_unix,
           timestampIST: r.timestamp_ist,
         }));
-      const computed = computeAnalytics(steps, calibrationFactor);
-      setAnalytics(computed);
+      setAnalytics(computeAnalytics(steps, calibrationFactor));
     }
   }, [allReadings, calibrationFactor]);
 

@@ -34,12 +34,12 @@ export default function SummaryCard({
         toValue: 1,
         tension: 60,
         friction: 8,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, []);
@@ -71,15 +71,32 @@ export default function SummaryCard({
       {trend && trendValue && (
         <View style={styles.trendRow}>
           <Ionicons
-            name={trend === "up" ? "trending-up" : trend === "down" ? "trending-down" : "remove"}
+            name={
+              trend === "up"
+                ? "trending-up"
+                : trend === "down"
+                ? "trending-down"
+                : "remove"
+            }
             size={12}
-            color={trend === "up" ? Colors.secondary : trend === "down" ? "#EF4444" : theme.textMuted}
+            color={
+              trend === "up"
+                ? Colors.secondary
+                : trend === "down"
+                ? "#EF4444"
+                : theme.textMuted
+            }
           />
           <Text
             style={[
               styles.trendText,
               {
-                color: trend === "up" ? Colors.secondary : trend === "down" ? "#EF4444" : theme.textMuted,
+                color:
+                  trend === "up"
+                    ? Colors.secondary
+                    : trend === "down"
+                    ? "#EF4444"
+                    : theme.textMuted,
               },
             ]}
           >

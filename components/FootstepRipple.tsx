@@ -12,59 +12,79 @@ interface Props {
 
 export default function FootstepRipple({ isDetected, energy, value, isDark }: Props) {
   const theme = isDark ? Colors.dark : Colors.light;
-  const ripple1 = useRef(new Animated.Value(0)).current;
-  const ripple2 = useRef(new Animated.Value(0)).current;
-  const ripple3 = useRef(new Animated.Value(0)).current;
+  const ripple1Scale = useRef(new Animated.Value(0.5)).current;
+  const ripple1Opacity = useRef(new Animated.Value(0)).current;
+  const ripple2Scale = useRef(new Animated.Value(0.5)).current;
+  const ripple2Opacity = useRef(new Animated.Value(0)).current;
+  const ripple3Scale = useRef(new Animated.Value(0.5)).current;
+  const ripple3Opacity = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (isDetected) {
-      ripple1.setValue(0);
-      ripple2.setValue(0);
-      ripple3.setValue(0);
-      fadeIn.setValue(0);
-      iconScale.setValue(1);
+      ripple1Scale.setValue(0.5);
+      ripple1Opacity.setValue(0);
+      ripple2Scale.setValue(0.5);
+      ripple2Opacity.setValue(0);
+      ripple3Scale.setValue(0.5);
+      ripple3Opacity.setValue(0);
+
+      const makeRipple = (scale: Animated.Value, opacity: Animated.Value, delay: number) =>
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(scale, { toValue: 2.5, duration: 700, useNativeDriver: false }),
+            Animated.sequence([
+              Animated.timing(opacity, { toValue: 0.6, duration: 100, useNativeDriver: false }),
+              Animated.timing(opacity, { toValue: 0, duration: 600, useNativeDriver: false }),
+            ]),
+          ]),
+        ]);
 
       Animated.parallel([
-        Animated.timing(fadeIn, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(fadeIn, { toValue: 1, duration: 200, useNativeDriver: false }),
         Animated.sequence([
-          Animated.timing(iconScale, { toValue: 1.3, duration: 150, useNativeDriver: true }),
-          Animated.timing(iconScale, { toValue: 1, duration: 200, useNativeDriver: true }),
+          Animated.timing(iconScale, { toValue: 1.3, duration: 150, useNativeDriver: false }),
+          Animated.timing(iconScale, { toValue: 1, duration: 200, useNativeDriver: false }),
         ]),
-        Animated.stagger(150, [
-          Animated.sequence([
-            Animated.timing(ripple1, { toValue: 1, duration: 700, useNativeDriver: true }),
-            Animated.timing(ripple1, { toValue: 0, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(ripple2, { toValue: 1, duration: 700, useNativeDriver: true }),
-            Animated.timing(ripple2, { toValue: 0, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(ripple3, { toValue: 1, duration: 700, useNativeDriver: true }),
-            Animated.timing(ripple3, { toValue: 0, duration: 0, useNativeDriver: true }),
-          ]),
-        ]),
+        makeRipple(ripple1Scale, ripple1Opacity, 0),
+        makeRipple(ripple2Scale, ripple2Opacity, 150),
+        makeRipple(ripple3Scale, ripple3Opacity, 300),
       ]).start();
     } else {
-      Animated.timing(fadeIn, { toValue: 0, duration: 500, useNativeDriver: true }).start();
+      Animated.timing(fadeIn, { toValue: 0, duration: 500, useNativeDriver: false }).start();
     }
   }, [isDetected]);
-
-  const makeRippleStyle = (anim: Animated.Value) => ({
-    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.5] }) }],
-    opacity: anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.6, 0] }),
-  });
 
   return (
     <View style={styles.container}>
       <View style={styles.rippleContainer}>
-        <Animated.View style={[styles.ripple, makeRippleStyle(ripple3), { borderColor: Colors.secondary }]} />
-        <Animated.View style={[styles.ripple, makeRippleStyle(ripple2), { borderColor: Colors.primary }]} />
-        <Animated.View style={[styles.ripple, makeRippleStyle(ripple1), { borderColor: Colors.accent }]} />
+        <Animated.View
+          style={[
+            styles.ripple,
+            { borderColor: Colors.secondary, transform: [{ scale: ripple3Scale }], opacity: ripple3Opacity },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.ripple,
+            { borderColor: Colors.primary, transform: [{ scale: ripple2Scale }], opacity: ripple2Opacity },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.ripple,
+            { borderColor: Colors.accent, transform: [{ scale: ripple1Scale }], opacity: ripple1Opacity },
+          ]}
+        />
         <Animated.View style={[styles.iconWrapper, { transform: [{ scale: iconScale }] }]}>
-          <View style={[styles.iconBg, { backgroundColor: isDark ? Colors.dark.surfaceElevated : Colors.light.surfaceElevated }]}>
+          <View
+            style={[
+              styles.iconBg,
+              { backgroundColor: isDark ? Colors.dark.surfaceElevated : Colors.light.surfaceElevated },
+            ]}
+          >
             <Ionicons
               name="footsteps"
               size={32}
@@ -88,9 +108,7 @@ export default function FootstepRipple({ isDetected, energy, value, isDark }: Pr
       </Animated.View>
 
       {!isDetected && (
-        <Text style={[styles.waiting, { color: theme.textMuted }]}>
-          Waiting for footstep...
-        </Text>
+        <Text style={[styles.waiting, { color: theme.textMuted }]}>Waiting for footstep...</Text>
       )}
     </View>
   );

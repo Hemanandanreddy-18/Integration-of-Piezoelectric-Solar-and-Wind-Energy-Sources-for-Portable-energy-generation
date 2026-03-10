@@ -10,32 +10,33 @@ interface Props {
 export default function DeviceStatus({ isDark }: Props) {
   const { isDeviceOnline, lastUpdateTime } = useSensor();
   const theme = isDark ? Colors.dark : Colors.light;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseScale = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     if (isDeviceOnline) {
-      Animated.loop(
+      const anim = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.8,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
+          Animated.parallel([
+            Animated.timing(pulseScale, { toValue: 2.2, duration: 900, useNativeDriver: false }),
+            Animated.timing(pulseOpacity, { toValue: 0, duration: 900, useNativeDriver: false }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseScale, { toValue: 1, duration: 0, useNativeDriver: false }),
+            Animated.timing(pulseOpacity, { toValue: 0.4, duration: 0, useNativeDriver: false }),
+          ]),
         ])
-      ).start();
+      );
+      anim.start();
+      return () => anim.stop();
     } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0);
     }
-  }, [isDeviceOnline, pulseAnim]);
+  }, [isDeviceOnline]);
 
   const formatLastUpdate = () => {
-    if (!lastUpdateTime) return "No data received";
+    if (!lastUpdateTime) return "No data";
     const now = Math.floor(Date.now() / 1000);
     const diff = now - lastUpdateTime;
     if (diff < 60) return `${diff}s ago`;
@@ -50,7 +51,11 @@ export default function DeviceStatus({ isDark }: Props) {
           <Animated.View
             style={[
               styles.pulse,
-              { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.8], outputRange: [0.4, 0] }) },
+              {
+                backgroundColor: Colors.secondary,
+                transform: [{ scale: pulseScale }],
+                opacity: pulseOpacity,
+              },
             ]}
           />
         )}
@@ -80,8 +85,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dotWrapper: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -95,7 +100,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.secondary,
     position: "absolute",
   },
   status: {

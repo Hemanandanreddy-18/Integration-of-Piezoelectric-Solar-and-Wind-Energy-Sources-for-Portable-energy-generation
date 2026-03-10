@@ -41,7 +41,7 @@ export default function RecentStepsList({ steps, isDark, limit = 10 }: Props) {
         <Text style={[styles.headerText, { color: theme.textSecondary }]}>Recent Activity</Text>
       </View>
       {displaySteps.map((step, index) => (
-        <View key={step.id}>
+        <View key={`${step.id}-list-${index}`}>
           <View style={styles.row}>
             <View style={[styles.dotLine]}>
               <View style={[styles.stepDot, { backgroundColor: Colors.primary }]} />
