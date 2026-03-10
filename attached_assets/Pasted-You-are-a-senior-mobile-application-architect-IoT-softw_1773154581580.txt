@@ -1,0 +1,452 @@
+You are a senior mobile application architect, IoT software engineer, and UI/UX designer.
+
+Generate a **complete professional mobile application** for an IoT project called:
+
+FOOTSTEP ENERGY GENERATION MONITORING SYSTEM
+
+The project must be built using **React Native with Expo** and must run inside **Replit**.
+
+The application should resemble a **premium industrial IoT monitoring dashboard** similar to modern smart-device dashboards used in **Tesla energy dashboards, Apple Health analytics, or industrial monitoring platforms**.
+
+The application must feature:
+
+• real-time Firebase data streaming
+• smooth **60 FPS animations**
+• premium modern UI
+• advanced data visualization
+• light mode and dark mode
+• interactive graphs
+• IoT device status monitoring
+
+The final result should look like a **startup-level smart energy monitoring product**, not a student project.
+
+---
+
+PROJECT HARDWARE SYSTEM
+
+The application monitors a **footstep energy generation device**.
+
+System architecture:
+
+Footstep pressure
+→ Piezoelectric sensors generate energy
+→ Generated energy lights an LED
+→ LDR sensor detects LED brightness
+→ ESP8266 reads LDR sensor value
+→ ESP8266 sends readings to Firebase
+→ Mobile app visualizes and analyzes data
+
+Important constraint:
+
+The ESP8266 only sends data when connected to power (for example via USB to laptop).
+
+If no new data arrives from Firebase for some time, the app must detect that the device is **offline**.
+
+---
+
+FIREBASE CONFIGURATION
+
+Use the following configuration exactly.
+
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+
+const firebaseConfig = {
+apiKey: "AIzaSyAfMsolY3MoqVe2k50x7-imgHtEysB1uB4",
+authDomain: "meow-ccc20.firebaseapp.com",
+databaseURL: "https://meow-ccc20-default-rtdb.firebaseio.com",
+projectId: "meow-ccc20",
+storageBucket: "meow-ccc20.firebasestorage.app",
+messagingSenderId: "455166913919",
+appId: "1:455166913919:web:836ee6dd65d3e969e33e4a",
+measurementId: "G-0RLLECDCV8"
+};
+
+Connect to **Firebase Realtime Database**.
+
+---
+
+FIREBASE DATA STRUCTURE
+
+Database path:
+
+/sensorData
+
+Each entry looks like:
+
+{
+"value": 30,
+"timestamp_unix": 1773073937,
+"timestamp_ist": "2026-03-09 22:02:17"
+}
+
+Where:
+
+value → LDR brightness intensity (0-1023)
+timestamp_unix → unix timestamp
+timestamp_ist → readable timestamp
+
+The application must **listen in real time**.
+
+---
+
+STEP DETECTION
+
+Use threshold detection.
+
+STEP_THRESHOLD = 18
+
+If sensor value > 18
+
+→ Footstep detected.
+
+Each spike corresponds to one step.
+
+---
+
+ENERGY CALCULATION
+
+Normalize sensor values.
+
+normalized = value / 1023
+
+Energy estimation:
+
+energy = normalized × 5
+
+Display energy in **Joules**.
+
+Allow calibration factor adjustment in settings.
+
+---
+
+ANALYTICS CALCULATIONS
+
+The app must compute:
+
+Total Steps Today
+Total Steps Yesterday
+Total Steps This Week
+Total Steps This Month
+
+Energy Generated Today
+Energy Generated Yesterday
+Energy Generated This Week
+Energy Generated This Month
+
+Average Step Energy
+Peak Footstep Intensity
+
+---
+
+TIME SEGMENT ANALYSIS
+
+Divide day into:
+
+Morning (5 AM – 12 PM)
+Afternoon (12 PM – 4 PM)
+Evening (4 PM – 8 PM)
+Night (8 PM – 5 AM)
+
+Calculate:
+
+Steps per segment
+Energy per segment.
+
+---
+
+DEVICE STATUS MONITORING
+
+Determine device status.
+
+If last Firebase record > 30 seconds old:
+
+DEVICE OFFLINE
+
+Otherwise:
+
+DEVICE ONLINE
+
+Display:
+
+Green pulsing dot → online
+Red dot → offline
+
+Also display:
+
+Last update timestamp.
+
+---
+
+PREMIUM UI DESIGN SYSTEM
+
+Use **React Native Paper** as the UI component framework.
+
+Use components:
+
+Appbar
+Card
+Surface
+List
+Divider
+Button
+ProgressBar
+
+Follow Material Design 3 principles.
+
+---
+
+COLOR PALETTE
+
+Primary: #6366F1
+Secondary: #22C55E
+Accent: #F59E0B
+
+Dark background: #0F172A
+Light background: #F8FAFC
+
+Use gradients and soft shadows.
+
+---
+
+THEME SUPPORT
+
+Implement full theme support:
+
+Light Mode
+Dark Mode
+
+Features:
+
+automatic system detection
+manual toggle in settings
+smooth animated transition
+
+---
+
+DASHBOARD LAYOUT (HIGHLY IMPRESSIVE FOR JUDGES)
+
+HEADER
+
+Project title
+Device status indicator
+Last update time
+
+ENERGY GAUGE
+
+Circular animated meter displaying current step energy.
+
+LIVE FOOTSTEP VISUALIZATION
+
+When step detected:
+
+👣 Step Detected
+⚡ Energy Generated
+
+Use ripple animation.
+
+SUMMARY CARDS
+
+Total Steps Today
+Energy Generated Today
+Peak Intensity
+Average Step Energy
+
+---
+
+ADVANCED VISUALIZATION
+
+MAIN GRAPH
+
+Energy vs Time
+
+Filters:
+
+Day
+Week
+Month
+
+---
+
+COMPARISON ANALYTICS
+
+Compare:
+
+Today vs Yesterday
+Weekly comparison
+Monthly comparison
+
+Use dual line charts or stacked bars.
+
+---
+
+FOOTSTEP ACTIVITY HEATMAP
+
+Heatmap showing activity during:
+
+Morning
+Afternoon
+Evening
+Night
+
+Darker color = higher activity.
+
+---
+
+ENERGY GROWTH TIMELINE
+
+Graph showing cumulative energy generated throughout the day.
+
+---
+
+INTENSITY DISTRIBUTION
+
+Histogram showing footstep strength distribution.
+
+---
+
+ENERGY IMPACT VISUALIZATION
+
+Add an **Energy Impact card**.
+
+Example:
+
+Energy Today: 320 J
+
+Equivalent to:
+
+💡 LED lighting for X minutes
+📱 Phone charging for X seconds
+🔋 Powering IoT sensor for X hours
+
+This helps non-technical users understand energy impact.
+
+---
+
+RECENT ACTIVITY
+
+Display recent steps list.
+
+Example:
+
+10:42 PM — Step detected — Energy 2.3 J
+
+---
+
+STEP SOUND EFFECT
+
+Play a soft sound whenever a step is detected.
+
+---
+
+GRAPH VISUALIZATION
+
+Use:
+
+react-native-gifted-charts
+or
+victory-native
+
+Charts must support:
+
+touch tooltips
+smooth animations
+responsive scaling
+clear labels with no overlapping.
+
+---
+
+USER EXPERIENCE FEATURES
+
+Add:
+
+smooth screen transitions
+pull-to-refresh
+animated counters
+loading skeleton screens
+smooth scrolling
+clear graph labels
+
+---
+
+PERFORMANCE
+
+Maintain **60 FPS rendering**.
+
+Avoid unnecessary re-renders.
+
+Fetch recent Firebase records only when necessary.
+
+---
+
+PROJECT STRUCTURE
+
+Generate project structure:
+
+/footstep-energy-app
+
+/src
+/components
+Header.js
+DeviceStatus.js
+EnergyGauge.js
+FootstepAnimation.js
+SummaryCard.js
+EnergyGraph.js
+ComparisonGraph.js
+HeatmapChart.js
+TimelineGraph.js
+EnergyImpactCard.js
+RecentStepsList.js
+
+/screens
+DashboardScreen.js
+AnalyticsScreen.js
+SettingsScreen.js
+
+/services
+firebaseService.js
+dataProcessor.js
+
+/utils
+energyCalculator.js
+stepDetection.js
+
+/theme
+lightTheme.js
+darkTheme.js
+
+App.js
+
+---
+
+CODE GENERATION METHOD
+
+Generate the project step by step:
+
+1. folder structure
+2. firebase service
+3. data processing logic
+4. UI components
+5. screens
+6. graphs
+7. animations
+8. theme system
+
+---
+
+FINAL RESULT
+
+Generate a **complete professional IoT dashboard mobile app**.
+
+Ensure:
+
+clean layout
+premium UI
+clear graphs
+no overlapping labels
+smooth animations
+real-time Firebase updates
+high-quality visualization
+
+The application must feel like a **commercial smart-energy monitoring product**.
