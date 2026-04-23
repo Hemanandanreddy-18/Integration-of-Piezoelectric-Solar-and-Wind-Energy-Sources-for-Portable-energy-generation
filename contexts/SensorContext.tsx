@@ -7,7 +7,6 @@ import {
   SensorReading,
   ProcessedStep,
   calculateEnergy,
-  isStep,
   computeAnalytics,
   AnalyticsData,
 } from "@/lib/energyCalculator";
@@ -36,21 +35,31 @@ const SensorContext = createContext<SensorContextValue | null>(null);
 const OFFLINE_THRESHOLD_SECONDS = 30;
 const MAX_STORED_STEPS = 200;
 
+const STEP_THRESHOLD = 18;
+const STEP_COOLDOWN = 1500;
+
 export function SensorProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
+
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [calibrationFactor, setCalibrationFactorState] = useState(1);
+
   const [latestReading, setLatestReading] = useState<SensorReading | null>(null);
   const [recentSteps, setRecentSteps] = useState<ProcessedStep[]>([]);
   const [allReadings, setAllReadings] = useState<SensorReading[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
   const [isDeviceOnline, setIsDeviceOnline] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
+
   const [currentStepEnergy, setCurrentStepEnergy] = useState(0);
   const [currentStepValue, setCurrentStepValue] = useState(0);
   const [isStepDetected, setIsStepDetected] = useState(false);
+
   const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenKeysRef = useRef<Set<string>>(new Set());
+
+  const lastStepTimeRef = useRef(0);
 
   const isDark =
     themeMode === "dark" || (themeMode === "system" && systemScheme === "dark");
@@ -77,12 +86,14 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
   const markOnline = useCallback(() => {
     setIsDeviceOnline(true);
     if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current);
+
     offlineTimerRef.current = setTimeout(() => {
       setIsDeviceOnline(false);
     }, OFFLINE_THRESHOLD_SECONDS * 1000);
   }, []);
 
   useEffect(() => {
+
     const sensorRef = query(
       ref(database, "sensorData"),
       orderByChild("timestamp_unix"),
@@ -90,26 +101,42 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     );
 
     const unsubscribe = onValue(sensorRef, (snapshot) => {
+
       if (!snapshot.exists()) return;
 
       const rawData = snapshot.val();
+
       const readings: SensorReading[] = [];
       const newSteps: ProcessedStep[] = [];
 
       if (typeof rawData === "object" && rawData !== null) {
+
         const fbKeys = Object.keys(rawData);
+
         for (const fbKey of fbKeys) {
+
           const item = rawData[fbKey];
+
           if (item && typeof item.value === "number" && item.timestamp_unix) {
+
             const reading: SensorReading = {
               value: item.value,
               timestamp_unix: item.timestamp_unix,
               timestamp_ist: item.timestamp_ist || "",
             };
+
             readings.push(reading);
 
-            if (!seenKeysRef.current.has(fbKey) && isStep(item.value)) {
+            const now = item.timestamp_unix * 1000;
+
+            if (
+              !seenKeysRef.current.has(fbKey) &&
+              item.value > STEP_THRESHOLD &&
+              now - lastStepTimeRef.current > STEP_COOLDOWN
+            ) {
+
               const energy = calculateEnergy(item.value, calibrationFactor);
+
               newSteps.push({
                 id: fbKey,
                 value: item.value,
@@ -117,7 +144,10 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
                 timestamp: item.timestamp_unix,
                 timestampIST: item.timestamp_ist || "",
               });
+
+              lastStepTimeRef.current = now;
               seenKeysRef.current.add(fbKey);
+
             } else if (!seenKeysRef.current.has(fbKey)) {
               seenKeysRef.current.add(fbKey);
             }
@@ -128,53 +158,65 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
       readings.sort((a, b) => a.timestamp_unix - b.timestamp_unix);
 
       if (readings.length > 0) {
+
         const latest = readings[readings.length - 1];
+
         setLatestReading(latest);
         setLastUpdateTime(latest.timestamp_unix);
         markOnline();
+
         setAllReadings(readings);
       }
 
       if (newSteps.length > 0) {
+
         newSteps.sort((a, b) => b.timestamp - a.timestamp);
+
         const latestStep = newSteps[0];
+
         setCurrentStepEnergy(latestStep.energy);
         setCurrentStepValue(latestStep.value);
+
         setIsStepDetected(true);
+
         setTimeout(() => setIsStepDetected(false), 2000);
 
         setRecentSteps((prev) => {
+
           const existingIds = new Set(prev.map((s) => s.id));
+
           const uniqueNew = newSteps.filter((s) => !existingIds.has(s.id));
+
           return [...uniqueNew, ...prev]
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, MAX_STORED_STEPS);
+
         });
       }
+
     });
 
     return () => {
       off(sensorRef);
       if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current);
     };
+
   }, [calibrationFactor, markOnline]);
 
   useEffect(() => {
-    if (allReadings.length > 0) {
-      const steps = allReadings
-        .filter((r) => isStep(r.value))
-        .map((r, i) => ({
-          id: `analytics-${r.timestamp_unix}-${i}`,
-          value: r.value,
-          energy: calculateEnergy(r.value, calibrationFactor),
-          timestamp: r.timestamp_unix,
-          timestampIST: r.timestamp_ist,
-        }));
-      setAnalytics(computeAnalytics(steps, calibrationFactor));
+
+    if (recentSteps.length > 0) {
+
+      setAnalytics(
+        computeAnalytics(recentSteps, calibrationFactor)
+      );
+
     }
-  }, [allReadings, calibrationFactor]);
+
+  }, [recentSteps, calibrationFactor]);
 
   return (
+
     <SensorContext.Provider
       value={{
         latestReading,
@@ -195,11 +237,15 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </SensorContext.Provider>
+
   );
 }
 
 export function useSensor() {
+
   const ctx = useContext(SensorContext);
+
   if (!ctx) throw new Error("useSensor must be used within SensorProvider");
+
   return ctx;
 }
