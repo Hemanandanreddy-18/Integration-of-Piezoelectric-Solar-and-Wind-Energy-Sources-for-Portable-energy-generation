@@ -1,1 +1,0 @@
-# Integration-of-Piezoelectric-Solar-and-Wind-Energy-Sources-for-Portable-energy-generation
